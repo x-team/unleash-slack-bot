@@ -1,5 +1,6 @@
 {
   "slackToken": "xxxx",
   "firebaseToken": "xxxx",
-  "firebaseURL": "xxxx"
+  "firebaseURL": "xxxx",
+  "unleasherChannel": "xxxx"
 }
