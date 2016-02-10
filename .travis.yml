@@ -1,0 +1,15 @@
+sudo: required
+language: node_js
+services:
+  - docker
+node_js:
+  - '4.1'
+before_deploy:
+  - cp src/config-template.json src/config.json
+  - sed -i "s/slack_token_value/$SLACK_TOKEN/g" src/config.json
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: ./deploy.sh latest
+    on:
+      branch: master
