@@ -1,6 +1,6 @@
 {
-  "slackToken": "xxxx",
-  "firebaseToken": "xxxx",
-  "firebaseURL": "xxxx",
-  "unleasherChannel": "xxxx"
+  "slackToken": "slack_token_value",
+  "firebaseToken": "firebase_token_value",
+  "firebaseURL": "firebase_url_value",
+  "unleasherChannel": "unleasher_channel_value"
 }
