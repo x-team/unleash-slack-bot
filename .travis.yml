@@ -7,12 +7,20 @@ node_js:
 before_deploy:
   - cp src/config-template.json src/config.json
   - sed -i "s/slack_token_value/$SLACK_TOKEN/g" src/config.json
-  - sed -i "s/firebase_token_value/$FIREBASE_TOKEN/g" src/config.json
-  - sed -i "s,firebase_url_value,$FIREBASE_URL,g" src/config.json
-  - sed -i "s/unleasher_channel_value/$UNLEASHER_CHANNEL/g" src/config.json
+  - if [ "$TRAVIS_BRANCH" == 'master' ]; then sed -i "s/firebase_token_value/$FIREBASE_TOKEN_PROD/g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s/firebase_token_value/$FIREBASE_TOKEN_STAGING/g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'master' ]; then sed -i "s,firebase_url_value,$FIREBASE_URL_PROD,g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s,firebase_url_value,$FIREBASE_URL_STAGING,g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'master' ]; then sed -i "s/unleasher_channel_value/$UNLEASHER_CHANNEL_PROD/g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s/unleasher_channel_value/$UNLEASHER_CHANNEL_STAGING/g" src/config.json; fi
 deploy:
   - provider: script
     skip_cleanup: true
     script: ./deploy.sh latest
     on:
       branch: master
+  - provider: script
+    skip_cleanup: true
+    script: ./deploy.sh staging
+    on:
+      branch: develop
