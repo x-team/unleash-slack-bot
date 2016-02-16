@@ -1,8 +1,8 @@
 {
-  "slackToken": "",
-  "firebaseToken": "",
-  "firebaseUrl": "",
-  "siteUrl": "",
-  "iconUrl": "",
-  "unleasherChannel": ""
+  "slackToken": "slack_token_value",
+  "firebaseToken": "firebase_token_value",
+  "firebaseUrl": "firebase_url_value",
+  "siteUrl": "site_url_value",
+  "iconUrl": "icon_url_value",
+  "unleasherChannel": "unleasher_channel_value"
 }
