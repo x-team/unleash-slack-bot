@@ -7,10 +7,10 @@ var request = require('request'),
     app  = express(),
     users = {
       general: {
-        name: '#general'
+        name: config.notificationsChannel
       }
     },
-    ref = new Firebase(config.firebaseURL),
+    ref = new Firebase(config.firebaseUrl),
     slackRef = ref.child('slack'),
     lastDate;
 
@@ -35,16 +35,30 @@ ref.authWithCustomToken( config.firebaseToken, function(error) {
     res.setHeader('Access-Control-Allow-Origin', '*');
 
     slackRef.child(req.body.uid).once('value', function(snapshot) {
-
-      console.log('Channel: ' + req.body.user + ', text:' + req.body.text);
-
       if (snapshot.val() == req.body.token && users[req.body.user]) {
-
-        request.post({url:'https://slack.com/api/chat.postMessage', form: {
+        var data = {
           token: config.slackToken,
-          channel: req.body.user == 'general' ? '#general' : '@' + users[req.body.user].name,
-          text: req.body.text
-        }}, function(err, httpResponse, body){});
+          text: req.body.text,
+          channel: users[req.body.user].name,
+          icon_url: config.iconUrl,
+          username: 'Unleash'
+        };
+
+        if (req.body.attachments) {
+          // Add URL to the card
+          if (req.body.queryString) {
+            req.body.attachments.map(function(attachment) {
+              attachment.title_link = config.siteUrl + req.body.queryString;
+              return attachment;
+            })
+          }
+
+          data.attachments = JSON.stringify(req.body.attachments);
+        }
+
+        request.post({url:'https://slack.com/api/chat.postMessage', form: data}, function(err, httpResponse, body) {
+          console.log('Posted a notification: ', body);
+        });
 
         res.end('ok');
       } else {
@@ -67,10 +81,9 @@ function updateUsers(callback) {
       token: config.slackToken
     }
   }, function(err, httpResponse, body) {
-    JSON.parse(body).members
-      .forEach(user => {
-        user.profile.email && (users['@' + user.profile.email.replace(/\+.*?@/, '@')] = user);
-      });
+    JSON.parse(body).members.map(function(user) {
+      user.profile && user.profile.email && (users['@' + user.profile.email.replace(/\+.*?@/, '@')] = user);
+    });
     callback();
   });
 }
@@ -100,14 +113,14 @@ function checkDueDates() {
             request.post({url:'https://slack.com/api/chat.postMessage', form: {
               token: config.slackToken,
               channel: '@' + users['@' + email].name,
-              text: 'Your card: "' + cardData.type + '" is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '.' : 's.')
+              text: 'Your "' + cardData.type + '" goal is is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!'
             }});
 
             if ( config.unleasherChannel ) {
               request.post({url:'https://slack.com/api/chat.postMessage', form: {
                 token: config.slackToken,
                 channel: '@' + config.unleasherChannel,
-                text: users['@' + email].name + '\'s card: "' + cardData.type + '" is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '.' : 's.')
+                text: users['@' + email].name + '\'s "' + cardData.type + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!')
               }});
             }
           }
@@ -116,14 +129,14 @@ function checkDueDates() {
             request.post({url:'https://slack.com/api/chat.postMessage', form: {
               token: config.slackToken,
               channel: '@' + users['@' + email].name,
-              text: 'Your card: "' + cardData.type + '" is overdue!'
+              text: 'Your "' + cardData.type + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!'
             }});
 
             if ( config.unleasherChannel ) {
               request.post({url:'https://slack.com/api/chat.postMessage', form: {
                 token: config.slackToken,
                 channel: '@' + config.unleasherChannel,
-                text: users['@' + email].name + '\'s card: "' + cardData.type + '" is overdue!'
+                text: users['@' + email].name + '\'s "' + cardData.type + '" goal is overdue!'
               }});
             }
           }
