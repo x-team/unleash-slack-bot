@@ -16,6 +16,8 @@ before_deploy:
   - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s,firebase_url_value,$FIREBASE_URL_STAGING,g" src/config.json; fi
   - if [ "$TRAVIS_BRANCH" == 'master' ]; then sed -i "s/unleasher_channel_value/$UNLEASHER_CHANNEL_PROD/g" src/config.json; fi
   - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s/unleasher_channel_value/$UNLEASHER_CHANNEL_STAGING/g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'master' ]; then sed -i "s/notifications_channel_value/$NOTIFICATIONS_CHANNEL_PROD/g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s/notifications_channel_value/$NOTIFICATIONS_CHANNEL_STAGING/g" src/config.json; fi
 deploy:
   - provider: script
     skip_cleanup: true

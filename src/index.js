@@ -7,7 +7,7 @@ var request = require('request'),
     app  = express(),
     users = {
       general: {
-        name: '#unleash-interface'
+        name: config.notificationsChannel
       }
     },
     ref = new Firebase(config.firebaseUrl),
