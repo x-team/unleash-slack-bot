@@ -8,6 +8,7 @@ before_deploy:
   - cp src/config-template.json src/config.json
   - sed -i "s/slack_token_value/$SLACK_TOKEN/g" src/config.json
   - sed -i "s,icon_url_value,$ICON_URL,g" src/config.json
+  - sed -i "s/rollbar_token_value/$ROLLBAR_TOKEN/g" src/config.json
   - if [ "$TRAVIS_BRANCH" == 'master' ]; then sed -i "s,site_url_value,$SITE_URL_PROD,g" src/config.json; fi
   - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s,site_url_value,$SITE_URL_STAGING,g" src/config.json; fi
   - if [ "$TRAVIS_BRANCH" == 'master' ]; then sed -i "s/firebase_token_value/$FIREBASE_TOKEN_PROD/g" src/config.json; fi
