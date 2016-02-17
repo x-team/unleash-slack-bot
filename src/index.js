@@ -4,6 +4,7 @@ var request = require('request'),
     cors    = require('cors'),
     Firebase = require('firebase'),
     bodyParser = require('body-parser'),
+    rollbar = require('rollbar'),
     app  = express(),
     users = {
       general: {
@@ -145,5 +146,7 @@ function checkDueDates() {
     });
   });
 }
+
+app.use(rollbar.errorHandler(config.rollbarToken));
 
 app.listen(8081);
