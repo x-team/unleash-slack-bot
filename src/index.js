@@ -59,16 +59,19 @@ ref.authWithCustomToken( config.firebaseToken, function(error) {
 
         request.post({url:'https://slack.com/api/chat.postMessage', form: data}, function(err, httpResponse, body) {
           console.log('Posted a notification: ', body);
+          rollbar.reportMessage('Posted a notification ' + body, 'info');
         });
 
         res.end('ok');
       } else {
         if (!(snapshot.val() == req.body.token)) {
           res.end('invalid token');
+          rollbar.reportMessage('Invalid token: ' + req.body.token, 'warning');
           return;
         }
         if (!users[req.body.user]) {
           res.end('no such channel/user');
+          rollbar.reportMessage('Invalid channel/user: ' + req.body.user, 'warning');
         }
       }
     });
