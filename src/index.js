@@ -112,42 +112,44 @@ function checkDueDates() {
         var cardData = card.val();
 
         var timeDifference = Math.floor((+new Date(card.child('dueDate').val()) - new Date()) / (1000 * 60 * 60 * 24));
-        if (timeDifference > 0) {
-          if ([7, 3, 1].indexOf(timeDifference) !== -1) {
-            request.post({url:'https://slack.com/api/chat.postMessage', form: {
-              token: config.slackToken,
-              channel: '@' + users['@' + email].name,
-              text: 'Your "' + cardData.type + '" goal is is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!'
-            }});
 
-            if ( config.unleasherChannel ) {
-              request.post({url:'https://slack.com/api/chat.postMessage', form: {
-                token: config.slackToken,
-                channel: '@' + config.unleasherChannel,
-                text: users['@' + email].name + '\'s "' + cardData.type + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!')
-              }});
-            }
-          }
-        } else {
-          if (timeDifference == 0) {
-            request.post({url:'https://slack.com/api/chat.postMessage', form: {
-              token: config.slackToken,
-              channel: '@' + users['@' + email].name,
-              text: 'Your "' + cardData.type + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!'
-            }});
-
-            if ( config.unleasherChannel ) {
-              request.post({url:'https://slack.com/api/chat.postMessage', form: {
-                token: config.slackToken,
-                channel: '@' + config.unleasherChannel,
-                text: users['@' + email].name + '\'s "' + cardData.type + '" goal is overdue!'
-              }});
-            }
-          }
+        if (dueDateNotificationShouldBePosted(timeDifference)) {
+          postPrivateNotification(timeDifference, cardData);
+          postUnleasherNotification(timeDifference, cardData);
         }
       });
     });
   });
+}
+
+function dueDateNotificationShouldBePosted(timeDifference) {
+  return timeDifference === 0 || [7, 3, 1].indexOf(timeDifference) !== -1;
+}
+
+function postPrivateNotification(timeDifference, cardData) {
+  var privateMessage = timeDifference == 0 ? 'Your "' + cardData.type + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
+    'Your "' + cardData.type + '" goal is is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
+
+  request.post({url:'https://slack.com/api/chat.postMessage', form: {
+    token: config.slackToken,
+    channel: '@' + users['@' + email].name,
+    text: privateMessage
+  }});
+  rollbar.reportMessage('Posted private message to @' + users['@' + email].name + ': ' + privateMessage, 'info');
+}
+
+function postUnleasherNotification(timeDifference, cardData) {
+  if ( config.unleasherChannel ) {
+    var unleasherMessage = timeDifference == 0 ? users['@' + email].name + '\'s "' + cardData.type + '" goal is overdue!' :
+      users['@' + email].name + '\'s "' + cardData.type + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
+
+    request.post({url:'https://slack.com/api/chat.postMessage', form: {
+      token: config.slackToken,
+      channel: '@' + config.unleasherChannel,
+      text: unleasherMessage
+    }});
+    rollbar.reportMessage('Posted unleasher message: ' + unleasherMessage, 'info');
+  }
 }
 
 app.use(rollbar.errorHandler(config.rollbarToken));
