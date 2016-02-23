@@ -141,9 +141,11 @@ function postPrivateNotification(timeDifference, cardData, email) {
 }
 
 function postUnleasherNotification(timeDifference, cardData, email) {
+  var currentUser = users['@' + email] || {};
+
   if ( config.unleasherChannel ) {
-    var unleasherMessage = timeDifference == 0 ? users['@' + email].name + '\'s "' + cardData.type + '" goal is overdue!' :
-      users['@' + email].name + '\'s "' + cardData.type + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
+    var unleasherMessage = timeDifference == 0 ? (currentUser.real_name || currentUser.name) + '\'s "' + cardData.type + '" goal is overdue!' :
+      (currentUser.real_name || currentUser.name) + '\'s "' + cardData.type + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
 
     request.post({url:'https://slack.com/api/chat.postMessage', form: {
       token: config.slackToken,
