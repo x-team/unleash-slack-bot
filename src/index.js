@@ -128,7 +128,7 @@ function dueDateNotificationShouldBePosted(timeDifference) {
 
 function postPrivateNotification(timeDifference, cardData, email) {
   var privateMessage = timeDifference == 0 ? 'Your "' + cardData.type + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
-    'Your "' + cardData.type + '" goal is is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
+    'Your "' + cardData.type + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
 
   var slackHandle = '@' + users['@' + email].name;
 
