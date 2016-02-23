@@ -151,8 +151,13 @@ function postUnleasherNotification(timeDifference, cardData, email) {
       token: config.slackToken,
       channel: config.unleasherChannel,
       text: unleasherMessage
-    }});
-    rollbar.reportMessage('Posted unleasher message: ' + unleasherMessage, 'info');
+    }}, function(err, httpResponse, body) {
+      rollbar.reportMessageWithPayloadData('Posted unleasher message to ' + config.unleasherChannel, {
+        level: 'info',
+        data: unleasherMessage,
+        response: body
+      });
+    });
   }
 }
 
