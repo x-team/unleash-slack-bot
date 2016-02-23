@@ -149,7 +149,7 @@ function postUnleasherNotification(timeDifference, cardData, email) {
 
     request.post({url:'https://slack.com/api/chat.postMessage', form: {
       token: config.slackToken,
-      channel: '@' + config.unleasherChannel,
+      channel: config.unleasherChannel,
       text: unleasherMessage
     }});
     rollbar.reportMessage('Posted unleasher message: ' + unleasherMessage, 'info');
