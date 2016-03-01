@@ -134,6 +134,8 @@ function postPrivateNotification(timeDifference, cardData, email) {
 
   request.post({url:'https://slack.com/api/chat.postMessage', form: {
     token: config.slackToken,
+    icon_url: config.iconUrl,
+    username: 'Unleash',
     channel: slackHandle,
     text: privateMessage
   }});
@@ -149,6 +151,8 @@ function postUnleasherNotification(timeDifference, cardData, email) {
 
     request.post({url:'https://slack.com/api/chat.postMessage', form: {
       token: config.slackToken,
+      icon_url: config.iconUrl,
+      username: 'Unleash',
       channel: config.unleasherChannel,
       text: unleasherMessage
     }}, function(err, httpResponse, body) {
