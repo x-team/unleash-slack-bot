@@ -40,7 +40,7 @@ ref.authWithCustomToken( config.firebaseToken, function(error) {
         var data = {
           token: config.slackToken,
           text: req.body.text,
-          channel: users[req.body.user].name,
+          channel: '@' + users[req.body.user].name,
           icon_url: config.iconUrl,
           username: 'Unleash'
         };
