@@ -40,7 +40,7 @@ ref.authWithCustomToken( config.firebaseToken, function(error) {
         var data = {
           token: config.slackToken,
           text: req.body.text,
-          channel: users[req.body.user].name,
+          channel: '@' + users[req.body.user].name,
           icon_url: config.iconUrl,
           username: 'Unleash'
         };
@@ -103,52 +103,64 @@ function checkDueDates() {
     snapshot.forEach(function(snapshot) {
 
       var email = snapshot.val().google.email;
+      if (!users['@' + email]) {
+        return;
+      }
 
       snapshot.child('cards').forEach(function(card) {
-        if (!card.child('dueDate').val() || !users['@' + email]) {
-          return;
-        }
-
-        var cardData = card.val();
-
-        var timeDifference = Math.floor((+new Date(card.child('dueDate').val()) - new Date()) / (1000 * 60 * 60 * 24));
-
-        if (dueDateNotificationShouldBePosted(timeDifference)) {
-          postPrivateNotification(timeDifference, cardData, email);
-          postUnleasherNotification(timeDifference, cardData, email);
+        if (dueDateNotificationShouldBePosted(card)) {
+          postPrivateNotification(card, email);
+          postUnleasherNotification(card, email);
         }
       });
     });
   });
 }
 
-function dueDateNotificationShouldBePosted(timeDifference) {
-  return timeDifference === 0 || [7, 3, 1].indexOf(timeDifference) !== -1;
+function getTimeDifferenceForCard(card) {
+  return Math.floor((+new Date(card.child('dueDate').val()) - new Date()) / (1000 * 60 * 60 * 24));
 }
 
-function postPrivateNotification(timeDifference, cardData, email) {
-  var privateMessage = timeDifference == 0 ? 'Your "' + cardData.type + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
-    'Your "' + cardData.type + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
+function dueDateNotificationShouldBePosted(card) {
+  if (card.child('achieved').val() || !card.child('dueDate').val()) {
+    return false;
+  }
+  var timeDifference = getTimeDifferenceForCard(card);
+
+  return timeDifference <= 0 || [7, 3, 1].indexOf(timeDifference) !== -1;
+}
+
+function postPrivateNotification(card, email) {
+  var timeDifference = getTimeDifferenceForCard(card);
+
+  var privateMessage = timeDifference <= 0 ? 'Your "' + card.child('type').val() + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
+    'Your "' + card.child('type').val() + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
 
   var slackHandle = '@' + users['@' + email].name;
 
   request.post({url:'https://slack.com/api/chat.postMessage', form: {
     token: config.slackToken,
+    icon_url: config.iconUrl,
+    username: 'Unleash',
     channel: slackHandle,
     text: privateMessage
   }});
   rollbar.reportMessage('Posted private message to ' + slackHandle + ': ' + privateMessage, 'info');
 }
 
-function postUnleasherNotification(timeDifference, cardData, email) {
+function postUnleasherNotification(card, email) {
+  var timeDifference = getTimeDifferenceForCard(card);
+
   var currentUser = users['@' + email] || {};
 
   if ( config.unleasherChannel ) {
-    var unleasherMessage = timeDifference == 0 ? (currentUser.real_name || currentUser.name) + '\'s "' + cardData.type + '" goal is overdue!' :
-      (currentUser.real_name || currentUser.name) + '\'s "' + cardData.type + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
+    var unleasherMessage = timeDifference <= 0 ? (currentUser.real_name || currentUser.name) + '\'s "' + card.child('type').val() + '" goal is overdue!' :
+      (currentUser.real_name || currentUser.name) + '\'s "' + card.child('type').val() + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
 
     request.post({url:'https://slack.com/api/chat.postMessage', form: {
       token: config.slackToken,
+      icon_url: config.iconUrl,
+      username: 'Unleash',
       channel: config.unleasherChannel,
       text: unleasherMessage
     }}, function(err, httpResponse, body) {
