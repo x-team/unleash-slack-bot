@@ -37,10 +37,13 @@ ref.authWithCustomToken( config.firebaseToken, function(error) {
 
     slackRef.child(req.body.uid).once('value', function(snapshot) {
       if (snapshot.val() == req.body.token && users[req.body.user]) {
+        var channel = req.body.user === 'general' ? users[req.body.user].name
+          : '@' + users[req.body.user].name;
+
         var data = {
           token: config.slackToken,
           text: req.body.text,
-          channel: '@' + users[req.body.user].name,
+          channel: channel,
           icon_url: config.iconUrl,
           username: 'Unleash'
         };
