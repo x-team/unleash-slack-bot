@@ -46,6 +46,11 @@ ref.authWithCustomToken( config.firebaseToken, function(error) {
 });
 
 function notifyOnSlack(req, res) {
+  if (req.body.debugMode || debugMode) {
+    res.end('debug mode enabled: aborting posting the notification');
+    return;
+  }
+
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   slackRef.child(req.body.uid).once('value', function(snapshot) {
@@ -61,11 +66,6 @@ function notifyOnSlack(req, res) {
 
       if (req.body.attachments) {
         data.attachments = JSON.stringify(formatAttachments(req.body));
-      }
-
-      if (debugMode) {
-        res.end('debug mode enabled: aborting posting the notification');
-        return;
       }
 
       request.post({url:'https://slack.com/api/chat.postMessage', form: data}, function(err, httpResponse, body) {
