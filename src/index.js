@@ -4,84 +4,105 @@ var request = require('request'),
     cors    = require('cors'),
     Firebase = require('firebase'),
     bodyParser = require('body-parser'),
+    assign = require('lodash.assign'),
     rollbar = require('rollbar'),
     app  = express(),
-    users = {
-      general: {
-        name: config.notificationsChannel
-      }
-    },
     ref = new Firebase(config.firebaseUrl),
     slackRef = ref.child('slack'),
+    debugMode = config.debugMode === 'true',
     lastDate;
 
-app.use(cors());
+var SLACK_CONFIG = {
+  token: config.slackToken,
+  icon_url: config.iconUrl,
+  username: config.botUsername
+};
 
+var users = {
+  general: {
+    name: config.notificationsChannel
+  }
+};
+
+app.use(cors());
 app.use(bodyParser.json({extended: true}));
 
+// Authenticate with Firebase
 ref.authWithCustomToken( config.firebaseToken, function(error) {
   if (error) {
     console.log('Authentication Failed!', error);
-  } else {
-    console.log('Authenticated successfully');
+    res.end();
   }
 
-  updateUsers(function() {
+  console.log('Authenticated to Firebase!');
+
+  getUsersList(function() {
     checkDueDates();
     setInterval(checkDueDates, 1000 * 60 * 60);
   });
 
 
-  app.post('/notify', function(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    slackRef.child(req.body.uid).once('value', function(snapshot) {
-      if (snapshot.val() == req.body.token && users[req.body.user]) {
-        var channel = req.body.user === 'general' ? users[req.body.user].name
-          : '@' + users[req.body.user].name;
-
-        var data = {
-          token: config.slackToken,
-          text: req.body.text,
-          channel: channel,
-          icon_url: config.iconUrl,
-          username: 'Unleash'
-        };
-
-        if (req.body.attachments) {
-          // Add URL to the card
-          if (req.body.queryString) {
-            req.body.attachments.map(function(attachment) {
-              attachment.title_link = config.siteUrl + req.body.queryString;
-              return attachment;
-            })
-          }
-
-          data.attachments = JSON.stringify(req.body.attachments);
-        }
-
-        request.post({url:'https://slack.com/api/chat.postMessage', form: data}, function(err, httpResponse, body) {
-          console.log('Posted a notification: ', body);
-          rollbar.reportMessage('Posted a notification ' + body, 'info');
-        });
-
-        res.end('ok');
-      } else {
-        if (!(snapshot.val() == req.body.token)) {
-          res.end('invalid token');
-          rollbar.reportMessage('Invalid token: ' + req.body.token, 'warning');
-          return;
-        }
-        if (!users[req.body.user]) {
-          res.end('no such channel/user');
-          rollbar.reportMessage('Unleash email not registered in Slack: ' + req.body.user, 'warning');
-        }
-      }
-    });
-  });
+  app.post('/notify', notifyOnSlack);
 });
 
-function updateUsers(callback) {
+function notifyOnSlack(req, res) {
+  if (req.body.debugMode || debugMode) {
+    res.end('debug mode enabled: aborting posting the notification');
+    return;
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  slackRef.child(req.body.uid).once('value', function(snapshot) {
+    if (snapshot.val() == req.body.token && users[req.body.user]) {
+      var channel = req.body.user === 'general' ? users[req.body.user].name
+        : '@' + users[req.body.user].name;
+
+      var data = assign(SLACK_CONFIG, {
+        text: req.body.text,
+        channel: channel
+      });
+
+
+      if (req.body.attachments) {
+        data.attachments = JSON.stringify(formatAttachments(req.body));
+      }
+
+      request.post({url:'https://slack.com/api/chat.postMessage', form: data}, function(err, httpResponse, body) {
+        console.log('Posted a notification: ', body);
+        rollbar.reportMessage('Posted a notification ' + body, 'info');
+      });
+
+      res.end('ok');
+    } else {
+      if (!(snapshot.val() == req.body.token)) {
+        res.end('invalid token');
+        rollbar.reportMessage('Invalid token: ' + req.body.token, 'warning');
+        return;
+      }
+      if (!users[req.body.user]) {
+        res.end('no such channel/user');
+        rollbar.reportMessage('Unleash email not registered in Slack: ' + req.body.user, 'warning');
+      }
+    }
+  });
+}
+
+function formatAttachments(body) {
+  var attachments = body.attachments;
+
+  // Add URL to the card
+  if (body.queryString) {
+    attachments.map(function(attachment) {
+      attachment.title_link = config.siteUrl + body.queryString;
+      return attachment;
+    })
+  }
+
+  return attachments;
+}
+
+function getUsersList(callback) {
   request.post({
     url:'https://slack.com/api/users.list',
     form: {
@@ -106,12 +127,13 @@ function checkDueDates() {
     snapshot.forEach(function(snapshot) {
 
       var email = snapshot.val().google.email;
+      // Check if Slack user for a given email address exists
       if (!users['@' + email]) {
         return;
       }
 
       snapshot.child('cards').forEach(function(card) {
-        if (dueDateNotificationShouldBePosted(card)) {
+        if (shouldDueDateNotificationBePosted(card)) {
           postPrivateNotification(card, email);
           postUnleasherNotification(card, email);
         }
@@ -124,10 +146,11 @@ function getTimeDifferenceForCard(card) {
   return Math.floor((+new Date(card.child('dueDate').val()) - new Date()) / (1000 * 60 * 60 * 24));
 }
 
-function dueDateNotificationShouldBePosted(card) {
-  if (card.child('achieved').val() || !card.child('dueDate').val()) {
+function shouldDueDateNotificationBePosted(card) {
+  if (debugMode || card.child('achieved').val() || !card.child('dueDate').val()) {
     return false;
   }
+
   var timeDifference = getTimeDifferenceForCard(card);
 
   return timeDifference <= 0 || [7, 3, 1].indexOf(timeDifference) !== -1;
@@ -141,13 +164,13 @@ function postPrivateNotification(card, email) {
 
   var slackHandle = '@' + users['@' + email].name;
 
-  request.post({url:'https://slack.com/api/chat.postMessage', form: {
-    token: config.slackToken,
-    icon_url: config.iconUrl,
-    username: 'Unleash',
+  var data = assign(SLACK_CONFIG, {
     channel: slackHandle,
     text: privateMessage
-  }});
+  });
+
+  request.post({url:'https://slack.com/api/chat.postMessage', form: data});
+
   rollbar.reportMessage('Posted private message to ' + slackHandle + ': ' + privateMessage, 'info');
 }
 
@@ -160,13 +183,12 @@ function postUnleasherNotification(card, email) {
     var unleasherMessage = timeDifference <= 0 ? (currentUser.real_name || currentUser.name) + '\'s "' + card.child('type').val() + '" goal is overdue!' :
       (currentUser.real_name || currentUser.name) + '\'s "' + card.child('type').val() + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
 
-    request.post({url:'https://slack.com/api/chat.postMessage', form: {
-      token: config.slackToken,
-      icon_url: config.iconUrl,
-      username: 'Unleash',
+    var data = assign(SLACK_CONFIG, {
       channel: config.unleasherChannel,
       text: unleasherMessage
-    }}, function(err, httpResponse, body) {
+    });
+
+    request.post({url:'https://slack.com/api/chat.postMessage', form: data}, function(err, httpResponse, body) {
       rollbar.reportMessageWithPayloadData('Posted unleasher message to ' + config.unleasherChannel, {
         level: 'info',
         data: unleasherMessage,
