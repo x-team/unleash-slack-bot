@@ -147,7 +147,7 @@ function getTimeDifferenceForCard(card) {
 }
 
 function shouldDueDateNotificationBePosted(card) {
-  if (card.child('achieved').val() || !card.child('dueDate').val()) {
+  if (debugMode || card.child('achieved').val() || !card.child('dueDate').val()) {
     return false;
   }
 
@@ -157,10 +157,6 @@ function shouldDueDateNotificationBePosted(card) {
 }
 
 function postPrivateNotification(card, email) {
-  if (debugMode) {
-    return;
-  }
-
   var timeDifference = getTimeDifferenceForCard(card);
 
   var privateMessage = timeDifference <= 0 ? 'Your "' + card.child('type').val() + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
@@ -179,10 +175,6 @@ function postPrivateNotification(card, email) {
 }
 
 function postUnleasherNotification(card, email) {
-  if (debugMode) {
-    return;
-  }
-
   var timeDifference = getTimeDifferenceForCard(card);
 
   var currentUser = users['@' + email] || {};
