@@ -161,11 +161,20 @@ function shouldDueDateNotificationBePosted(card) {
   return NOTIFICATION_TIMEFRAMES.indexOf(timeDifference) !== -1;
 }
 
+function getGoalName(card) {
+  var goalName = card.child('type').val();
+  if (card.child('level').val()) {
+    goalName += ' - Level ' + card.child('level').val();
+  }
+
+  return goalName;
+}
+
 function postPrivateNotification(card, email) {
   var timeDifference = getTimeDifferenceForCard(card);
   var slackHandle = '@' + users['@' + email].name;
-  var message = timeDifference <= 0 ? 'Your "' + card.child('type').val() + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
-    'Your "' + card.child('type').val() + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
+  var message = timeDifference <= 0 ? 'Your "' + getGoalName(card) + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
+    'Your "' + getGoalName(card) + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
 
   postNotification(card, timeDifference, {
     channel: slackHandle,
@@ -181,8 +190,8 @@ function postUnleasherNotification(card, email) {
 
   var timeDifference = getTimeDifferenceForCard(card);
   var currentUser = users['@' + email] || {};
-  var message = timeDifference <= 0 ? (currentUser.real_name || currentUser.name) + '\'s "' + card.child('type').val() + '" goal is overdue!' :
-    (currentUser.real_name || currentUser.name) + '\'s "' + card.child('type').val() + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
+  var message = timeDifference <= 0 ? (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is overdue!' :
+    (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
 
   postNotification(card, timeDifference, {
     channel: config.unleasherChannel,
