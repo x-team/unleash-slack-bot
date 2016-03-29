@@ -145,7 +145,7 @@ function checkDueDates() {
 }
 
 function getTimeDifferenceForCard(card) {
-  return Math.max(0, Math.floor((+new Date(card.child('dueDate').val()) - new Date()) / (1000 * 60 * 60 * 24)));
+  return Math.max(0, Math.floor((+new Date(card.child('dueDate').val()) - new Date()) / (1000 * 60 * 60 * 24)) + 1);
 }
 
 function shouldDueDateNotificationBePosted(card) {
