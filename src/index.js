@@ -170,11 +170,22 @@ function getGoalName(card) {
   return goalName;
 }
 
+function getTimeDifferenceText(timeDifference) {
+  if (timeDifference < 0) {
+    return 'overdue';
+  } else if (timeDifference === 0) {
+    return 'due today';
+  } else if (timeDifference === 1) {
+    return 'due tomorrow';
+  } else {
+    return 'due in ' + timeDifference + ' days';
+  }
+}
+
 function postPrivateNotification(card, email) {
   var timeDifference = getTimeDifferenceForCard(card);
   var slackHandle = '@' + users['@' + email].name;
-  var message = timeDifference <= 0 ? 'Your "' + getGoalName(card) + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
-    'Your "' + getGoalName(card) + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
+  var message = 'Your "' + getGoalName(card) + '" goal is ' + getTimeDifferenceText(timeDifference) + '… Feel free to reach out to your Unleasher if you need any help!';
 
   postNotification(card, timeDifference, {
     channel: slackHandle,
@@ -190,8 +201,7 @@ function postUnleasherNotification(card, email) {
 
   var timeDifference = getTimeDifferenceForCard(card);
   var currentUser = users['@' + email] || {};
-  var message = timeDifference <= 0 ? (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is overdue!' :
-    (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
+  var message = (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is ' + getTimeDifferenceText(timeDifference) + '!';
 
   postNotification(card, timeDifference, {
     channel: config.unleasherChannel,
