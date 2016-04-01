@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "echo \"Warning: no test specified\""
+    "test": "./node_modules/.bin/jasmine-node spec"
   },
   "author": "Tadeusz Piskozub",
   "license": "BSD-2-Clause",
@@ -16,5 +16,8 @@
     "firebase": "^2.3.1",
     "request": "~2.65.0",
     "rollbar": "^0.5.12"
+  },
+  "devDependencies": {
+    "jasmine-node": "^1.14.5"
   }
 }
