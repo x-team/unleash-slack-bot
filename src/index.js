@@ -15,7 +15,8 @@ var request = require('request'),
 var SLACK_CONFIG = {
   token: config.slackToken,
   icon_url: config.iconUrl,
-  username: config.botUsername
+  username: config.botUsername,
+  attachments: []
 };
 
 var NOTIFICATION_TIMEFRAMES = [7, 3, 1, 0];
