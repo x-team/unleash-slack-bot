@@ -4,13 +4,12 @@ var request = require('request'),
     cors    = require('cors'),
     Firebase = require('firebase'),
     bodyParser = require('body-parser'),
-    assign = require('lodash.assign'),
+    defaults = require('lodash.defaults'),
     rollbar = require('rollbar'),
     app  = express(),
     ref = new Firebase(config.firebaseUrl),
     slackRef = ref.child('slack'),
-    debugMode = config.debugMode === 'true',
-    lastDate;
+    debugMode = config.debugMode === 'true';
 
 var SLACK_CONFIG = {
   token: config.slackToken,
@@ -61,7 +60,7 @@ function notifyOnSlack(req, res) {
       var channel = req.body.user === 'general' ? users[req.body.user].name
         : '@' + users[req.body.user].name;
 
-      var data = assign(SLACK_CONFIG, {
+      var data = defaults(SLACK_CONFIG, {
         text: req.body.text,
         channel: channel
       });
@@ -71,10 +70,21 @@ function notifyOnSlack(req, res) {
         data.attachments = JSON.stringify(formatAttachments(req.body));
       }
 
-      request.post({url:'https://slack.com/api/chat.postMessage', form: data}, function(err, httpResponse, body) {
-        console.log('Posted a notification: ', body);
-        rollbar.reportMessage('Posted a notification ' + body, 'info');
-      });
+      request.post(
+        {
+          url:'https://slack.com/api/chat.postMessage',
+          form: data,
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': 0
+          }
+        },
+        function(err, httpResponse, body) {
+          console.log('Posted a notification: ', body);
+          rollbar.reportMessage('Posted a notification ' + body, 'info');
+        }
+      );
 
       res.end('ok');
     } else {
@@ -120,12 +130,6 @@ function getUsersList(callback) {
 }
 
 function checkDueDates() {
-  if ( lastDate == (new Date()).getDate() ) {
-    return;
-  }
-
-  lastDate = (new Date()).getDate();
-
   ref.child('users').once('value', function(snapshot) {
     snapshot.forEach(function(snapshot) {
 
@@ -136,7 +140,7 @@ function checkDueDates() {
       }
 
       snapshot.child('cards').forEach(function(card) {
-        if (shouldDueDateNotificationBePosted(card)) {
+        if (shouldDueDateNotificationBePosted(card, users['@' + email].tz_offset)) {
           postPrivateNotification(card, email);
           postUnleasherNotification(card, email);
         }
@@ -145,12 +149,16 @@ function checkDueDates() {
   });
 }
 
-function getTimeDifferenceForCard(card) {
-  return Math.max(0, Math.floor((+new Date(card.child('dueDate').val()) - new Date()) / (1000 * 60 * 60 * 24)));
+function getTimeDifferenceForCard(card, userTimezoneOffset) {
+  var localTimeDifferenceInSeconds = (+new Date(card.child('dueDate').val()) - new Date()) / 1000;
+  var localTimeOffsetInSeconds = (new Date().getTimezoneOffset()*60);
+  var secondsInADay = 60 * 60 * 24;
+
+  return Math.floor((localTimeDifferenceInSeconds - userTimezoneOffset - localTimeOffsetInSeconds) / secondsInADay) + 1;
 }
 
-function shouldDueDateNotificationBePosted(card) {
-  var timeDifference = getTimeDifferenceForCard(card);
+function shouldDueDateNotificationBePosted(card, userTimezoneOffset) {
+  var timeDifference = getTimeDifferenceForCard(card, userTimezoneOffset);
   var isAlreadyAchieved = card.child('achieved').val();
   var hasNoDueDate = !card.child('dueDate').val();
   var hasBeenAlreadyPosted = card.child('notificationsAlreadySent').child(timeDifference).val();
@@ -171,11 +179,22 @@ function getGoalName(card) {
   return goalName;
 }
 
+function getTimeDifferenceText(timeDifference) {
+  if (timeDifference < 0) {
+    return 'overdue';
+  } else if (timeDifference === 0) {
+    return 'due today';
+  } else if (timeDifference === 1) {
+    return 'due tomorrow';
+  } else {
+    return 'due in ' + timeDifference + ' days';
+  }
+}
+
 function postPrivateNotification(card, email) {
-  var timeDifference = getTimeDifferenceForCard(card);
+  var timeDifference = getTimeDifferenceForCard(card, users['@' + email].tz_offset);
   var slackHandle = '@' + users['@' + email].name;
-  var message = timeDifference <= 0 ? 'Your "' + getGoalName(card) + '" goal is overdue… Feel free to reach out to your Unleasher if you need any help!' :
-    'Your "' + getGoalName(card) + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '' : 's') + '… Feel free to reach out to your Unleasher if you need any help!';
+  var message = 'Your "' + getGoalName(card) + '" goal is ' + getTimeDifferenceText(timeDifference) + '… Feel free to reach out to your Unleasher if you need any help!';
 
   postNotification(card, timeDifference, {
     channel: slackHandle,
@@ -189,10 +208,9 @@ function postUnleasherNotification(card, email) {
     return;
   }
 
-  var timeDifference = getTimeDifferenceForCard(card);
   var currentUser = users['@' + email] || {};
-  var message = timeDifference <= 0 ? (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is overdue!' :
-    (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is due in ' + timeDifference + ' day' + (timeDifference === 1 ? '!' : 's!');
+  var timeDifference = getTimeDifferenceForCard(card, currentUser.tz_offset);
+  var message = (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is ' + getTimeDifferenceText(timeDifference) + '!';
 
   postNotification(card, timeDifference, {
     channel: config.unleasherChannel,
@@ -209,28 +227,38 @@ function postUnleasherNotification(card, email) {
  * @param {String} data.text - Notification contents
  */
 function postNotification(card, timeDifference, data) {
-  var config = assign(SLACK_CONFIG, data);
+  var config = defaults(SLACK_CONFIG, data);
 
-  request.post({url:'https://slack.com/api/chat.postMessage', form: config}, function(err, httpResponse, body) {
-    if (err || (body && body.ok === false)) {
-      var msg = 'Couldn\'t post to ' + data.channel + '!';
+  request.post(
+    {
+      url:'https://slack.com/api/chat.postMessage',
+      form: config,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': 0
+      }
+    },
+    function(err, httpResponse, body) {
+      if (err || (body && body.ok === false)) {
+        var msg = 'Couldn\'t post to ' + data.channel + '!';
 
-      console.error(msg);
+        console.error(msg);
 
-      rollbar.reportMessageWithPayloadData(msg, {
-        level: 'error',
-        data: config.text,
-        response: body
-      });
-    } else {
-      markNotificationAsSent(card, timeDifference);
+        rollbar.reportMessageWithPayloadData(msg, {
+          level: 'error',
+          data: config.text,
+          response: body
+        });
+      } else {
+        markNotificationAsSent(card, timeDifference);
 
-      rollbar.reportMessageWithPayloadData('Posted a message to ' + config.channel, {
-        level: 'info',
-        data: config.text,
-        response: body
-      });
-    }
+        rollbar.reportMessageWithPayloadData('Posted a message to ' + config.channel, {
+          level: 'info',
+          data: config.text,
+          response: body
+        });
+      }
   });
 }
 
