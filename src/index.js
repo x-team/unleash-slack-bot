@@ -4,7 +4,7 @@ var request = require('request'),
     cors    = require('cors'),
     Firebase = require('firebase'),
     bodyParser = require('body-parser'),
-    assign = require('lodash.assign'),
+    defaults = require('lodash.defaults'),
     rollbar = require('rollbar'),
     app  = express(),
     ref = new Firebase(config.firebaseUrl),
@@ -60,7 +60,7 @@ function notifyOnSlack(req, res) {
       var channel = req.body.user === 'general' ? users[req.body.user].name
         : '@' + users[req.body.user].name;
 
-      var data = assign(SLACK_CONFIG, {
+      var data = defaults(SLACK_CONFIG, {
         text: req.body.text,
         channel: channel
       });
@@ -227,7 +227,7 @@ function postUnleasherNotification(card, email) {
  * @param {String} data.text - Notification contents
  */
 function postNotification(card, timeDifference, data) {
-  var config = assign(SLACK_CONFIG, data);
+  var config = defaults(SLACK_CONFIG, data);
 
   request.post(
     {
