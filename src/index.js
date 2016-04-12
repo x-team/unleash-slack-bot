@@ -70,10 +70,21 @@ function notifyOnSlack(req, res) {
         data.attachments = JSON.stringify(formatAttachments(req.body));
       }
 
-      request.post({url:'https://slack.com/api/chat.postMessage', form: data}, function(err, httpResponse, body) {
-        console.log('Posted a notification: ', body);
-        rollbar.reportMessage('Posted a notification ' + body, 'info');
-      });
+      request.post(
+        {
+          url:'https://slack.com/api/chat.postMessage',
+          form: data,
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': 0
+          }
+        },
+        function(err, httpResponse, body) {
+          console.log('Posted a notification: ', body);
+          rollbar.reportMessage('Posted a notification ' + body, 'info');
+        }
+      );
 
       res.end('ok');
     } else {
@@ -218,26 +229,36 @@ function postUnleasherNotification(card, email) {
 function postNotification(card, timeDifference, data) {
   var config = assign(SLACK_CONFIG, data);
 
-  request.post({url:'https://slack.com/api/chat.postMessage', form: config}, function(err, httpResponse, body) {
-    if (err || (body && body.ok === false)) {
-      var msg = 'Couldn\'t post to ' + data.channel + '!';
+  request.post(
+    {
+      url:'https://slack.com/api/chat.postMessage',
+      form: config,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': 0
+      }
+    },
+    function(err, httpResponse, body) {
+      if (err || (body && body.ok === false)) {
+        var msg = 'Couldn\'t post to ' + data.channel + '!';
 
-      console.error(msg);
+        console.error(msg);
 
-      rollbar.reportMessageWithPayloadData(msg, {
-        level: 'error',
-        data: config.text,
-        response: body
-      });
-    } else {
-      markNotificationAsSent(card, timeDifference);
+        rollbar.reportMessageWithPayloadData(msg, {
+          level: 'error',
+          data: config.text,
+          response: body
+        });
+      } else {
+        markNotificationAsSent(card, timeDifference);
 
-      rollbar.reportMessageWithPayloadData('Posted a message to ' + config.channel, {
-        level: 'info',
-        data: config.text,
-        response: body
-      });
-    }
+        rollbar.reportMessageWithPayloadData('Posted a message to ' + config.channel, {
+          level: 'info',
+          data: config.text,
+          response: body
+        });
+      }
   });
 }
 
