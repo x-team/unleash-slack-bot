@@ -73,12 +73,7 @@ function notifyOnSlack(req, res) {
       request.post(
         {
           url:'https://slack.com/api/chat.postMessage',
-          form: data,
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': 0
-          }
+          form: data
         },
         function(err, httpResponse, body) {
           console.log('Posted a notification: ', body);
@@ -232,12 +227,7 @@ function postNotification(card, timeDifference, data) {
   request.post(
     {
       url:'https://slack.com/api/chat.postMessage',
-      form: config,
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': 0
-      }
+      form: config
     },
     function(err, httpResponse, body) {
       if (err || (body && body.ok === false)) {
