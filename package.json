@@ -14,7 +14,6 @@
     "cors": "^2.7.1",
     "express": "~4.13.3",
     "firebase": "^2.3.1",
-    "lodash.defaults": "^4.0.1",
     "request": "~2.65.0",
     "rollbar": "^0.5.12"
   }
