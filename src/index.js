@@ -4,7 +4,6 @@ var request = require('request'),
     cors    = require('cors'),
     Firebase = require('firebase'),
     bodyParser = require('body-parser'),
-    defaults = require('lodash.defaults'),
     rollbar = require('rollbar'),
     app  = express(),
     ref = new Firebase(config.firebaseUrl),
@@ -60,11 +59,14 @@ function notifyOnSlack(req, res) {
       var channel = req.body.user === 'general' ? users[req.body.user].name
         : '@' + users[req.body.user].name;
 
-      var data = defaults(SLACK_CONFIG, {
+      var data = {
         text: req.body.text,
-        channel: channel
-      });
-
+        channel: channel,
+        token: config.slackToken,
+        icon_url: config.iconUrl,
+        username: config.botUsername,
+        attachments: []
+      };
 
       if (req.body.attachments) {
         data.attachments = JSON.stringify(formatAttachments(req.body));
@@ -191,10 +193,14 @@ function postPrivateNotification(card, email) {
   var slackHandle = '@' + users['@' + email].name;
   var message = 'Your "' + getGoalName(card) + '" goal is ' + getTimeDifferenceText(timeDifference) + '… Feel free to reach out to your Unleasher if you need any help!';
 
-  postNotification(card, timeDifference, {
+  postNotification(card, timeDifference,   {
     channel: slackHandle,
-    text: message
-  })
+    text: message,
+    token: config.slackToken,
+    icon_url: config.iconUrl,
+    username: config.botUsername,
+    attachments: []
+  });
 }
 
 function postUnleasherNotification(card, email) {
@@ -209,7 +215,11 @@ function postUnleasherNotification(card, email) {
 
   postNotification(card, timeDifference, {
     channel: config.unleasherChannel,
-    text: message
+    text: message,
+    token: config.slackToken,
+    icon_url: config.iconUrl,
+    username: config.botUsername,
+    attachments: []
   });
 }
 
@@ -222,12 +232,10 @@ function postUnleasherNotification(card, email) {
  * @param {String} data.text - Notification contents
  */
 function postNotification(card, timeDifference, data) {
-  var config = defaults(SLACK_CONFIG, data);
-
   request.post(
     {
       url:'https://slack.com/api/chat.postMessage',
-      form: config
+      form: data
     },
     function(err, httpResponse, body) {
       if (err || (body && body.ok === false)) {
@@ -237,15 +245,15 @@ function postNotification(card, timeDifference, data) {
 
         rollbar.reportMessageWithPayloadData(msg, {
           level: 'error',
-          data: config.text,
+          data: data.text,
           response: body
         });
       } else {
         markNotificationAsSent(card, timeDifference);
 
-        rollbar.reportMessageWithPayloadData('Posted a message to ' + config.channel, {
+        rollbar.reportMessageWithPayloadData('Posted a message to ' + data.channel, {
           level: 'info',
-          data: config.text,
+          data: data.text,
           response: body
         });
       }
