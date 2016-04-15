@@ -5,19 +5,12 @@ var request = require('request'),
     Firebase = require('firebase'),
     bodyParser = require('body-parser'),
     rollbar = require('rollbar'),
+    Card = require('./model/card'),
+    cardService = require('./service/cardService'),
     app  = express(),
     ref = new Firebase(config.firebaseUrl),
     slackRef = ref.child('slack'),
     debugMode = config.debugMode === 'true';
-
-var SLACK_CONFIG = {
-  token: config.slackToken,
-  icon_url: config.iconUrl,
-  username: config.botUsername,
-  attachments: []
-};
-
-var NOTIFICATION_TIMEFRAMES = [7, 3, 1, 0];
 
 var users = {
   general: {
@@ -140,10 +133,13 @@ function checkDueDates() {
         return;
       }
 
-      snapshot.child('cards').forEach(function(card) {
-        if (shouldDueDateNotificationBePosted(card, users['@' + email].tz_offset)) {
-          postPrivateNotification(card, email);
-          postUnleasherNotification(card, email);
+      snapshot.child('cards').forEach(function(firebaseCard) {
+        var card = new Card();
+        card.fromFirebase(firebaseCard);
+
+        if (cardService.shouldDueDateNotificationBePosted(card, users['@' + email].tz_offset)) {
+          postPrivateNotification(firebaseCard, email);
+          postUnleasherNotification(firebaseCard, email);
         }
       });
     });
@@ -156,19 +152,6 @@ function getTimeDifferenceForCard(card, userTimezoneOffset) {
   var secondsInADay = 60 * 60 * 24;
 
   return Math.floor((localTimeDifferenceInSeconds - userTimezoneOffset - localTimeOffsetInSeconds) / secondsInADay) + 1;
-}
-
-function shouldDueDateNotificationBePosted(card, userTimezoneOffset) {
-  var timeDifference = getTimeDifferenceForCard(card, userTimezoneOffset);
-  var isAlreadyAchieved = card.child('achieved').val();
-  var hasNoDueDate = !card.child('dueDate').val();
-  var hasBeenAlreadyPosted = card.child('notificationsAlreadySent').child(timeDifference).val();
-
-  if (debugMode || isAlreadyAchieved || hasNoDueDate || hasBeenAlreadyPosted) {
-    return false;
-  }
-
-  return NOTIFICATION_TIMEFRAMES.indexOf(timeDifference) !== -1;
 }
 
 function getGoalName(card) {
