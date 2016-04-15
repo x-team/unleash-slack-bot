@@ -37,10 +37,14 @@ ref.authWithCustomToken( config.firebaseToken, function(error) {
 
   console.log('Authenticated to Firebase!');
 
-  getUsersList(function() {
-    checkDueDates();
-    setInterval(checkDueDates, 1000 * 60 * 60);
-  });
+  setInterval(
+    function () {
+      getUsersList(function() {
+        checkDueDates();
+      });
+    },
+    1000 * 60 * 60
+  );
 
 
   app.post('/notify', notifyOnSlack);
