@@ -1,15 +1,18 @@
-var Card = function(firebaseCard) {
+var Card = function() {
 }
 
-Card.prototype.fromFirebase = function(firebaseCard) {
-  this.achieved = firebaseCard.child('achieved').val();
-  this.dueDate = firebaseCard.child('dueDate').val();
+Card.prototype.fromJson = function(jsonCard) {
+  this.id = jsonCard.id;
+  this.name = jsonCard.name;
+  this.description = jsonCard.description;
+  this.level = jsonCard.level;
+  this.achieved = jsonCard.achieved;
+  this.dueDate = jsonCard.dueDate;
+  this.lastNotificationSent = jsonCard.lastNotificationSent;
+}
 
-  var notifications = [];
-  firebaseCard.child('notificationsAlreadySent').forEach(function(notification) {
-    notifications[notification.key()] = notification.val();
-  });
-  this.notificationsAlreadySent = notifications;
+Card.prototype.getId = function() {
+  return this.id;
 }
 
 Card.prototype.isAchieved = function() {
@@ -24,8 +27,22 @@ Card.prototype.getDueDate = function () {
   return this.dueDate;
 }
 
+Card.prototype.getGoalName = function() {
+  var goalName = this.name;
+  if (this.level) {
+    goalName += ' - Level ' + this.level;
+  }
+
+  return goalName;
+}
+
 Card.prototype.hasBeenAlreadyPosted = function(daysToDueDate) {
-  return this.notificationsAlreadySent[daysToDueDate] === true;
+  var hasBeenAlreadyPosted = false;
+  if (this.lastNotificationSent != null && this.lastNotificationSent >= daysToDueDate) {
+    hasBeenAlreadyPosted = true;
+  }
+
+  return hasBeenAlreadyPosted;
 }
 
 module.exports = Card;

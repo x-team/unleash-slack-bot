@@ -1,5 +1,9 @@
+var request = require('request'),
+    timeService = require('./timeService'),
+    q = require('q');
+
 exports.shouldDueDateNotificationBePosted = function(card, userTimezoneOffset) {
-  var timeDifference = getTimeDifferenceForCard(card, userTimezoneOffset);
+  var timeDifference = timeService.getTimeDifferenceForCard(card, userTimezoneOffset);
 
   if (card.isAchieved() || card.hasNoDueDate() || card.hasBeenAlreadyPosted(timeDifference)) {
     return false;
@@ -8,14 +12,29 @@ exports.shouldDueDateNotificationBePosted = function(card, userTimezoneOffset) {
   return isInNotifiableTimeframe(timeDifference);
 }
 
-function isInNotifiableTimeframe(timeDifference) {
-  return [7, 3, 1, 0].indexOf(timeDifference) !== -1;
+exports.getCardsForUser = function(userId) {
+  var deferred = q.defer();
+  request.get('http://paths.unleash.x-team.com/api/v1/paths/' + userId + '.json', (err, httpResponse, body) => {
+    if (err || (body && body.ok === false)) {
+        deferred.reject(new Error(err));
+    }
+
+    var data = JSON.parse(body);
+    deferred.resolve(data.goals);
+  });
+
+  return deferred.promise;
 }
 
-function getTimeDifferenceForCard(card, userTimezoneOffset) {
-  var localTimeDifferenceInSeconds = Math.round((+new Date(card.getDueDate()) - new Date()) / 1000);
-  var localTimeOffsetInSeconds = (new Date().getTimezoneOffset()*60);
-  var secondsInADay = 60 * 60 * 24;
+exports.markNotificationAsSent = function(userId, card, timeDifference) {
+  request.put({
+    url:'http://paths.unleash.x-team.com/api/v1/paths/' + userId + '/goals/' + card.getId() + '.json',
+    form: {
+      lastNotificationSent: timeDifference
+    }
+  });
+}
 
-  return Math.floor((localTimeDifferenceInSeconds - userTimezoneOffset - localTimeOffsetInSeconds) / secondsInADay) + 1;
+function isInNotifiableTimeframe(timeDifference) {
+  return [7, 3, 1, 0].indexOf(timeDifference) !== -1;
 }

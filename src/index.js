@@ -6,7 +6,9 @@ var request = require('request'),
     bodyParser = require('body-parser'),
     rollbar = require('rollbar'),
     Card = require('./model/card'),
+    forEach = require('lodash.foreach'),
     cardService = require('./service/cardService'),
+    slackService = require('./service/slackService'),
     app  = express(),
     ref = new Firebase(config.firebaseUrl),
     slackRef = ref.child('slack'),
@@ -129,131 +131,27 @@ function checkDueDates() {
 
       var email = snapshot.val().google.email;
       // Check if Slack user for a given email address exists
-      if (!users['@' + email]) {
+      var slackUser = users['@' + email];
+      if (!slackUser) {
         return;
       }
+      var userId = snapshot.key();
 
-      snapshot.child('cards').forEach(function(firebaseCard) {
-        var card = new Card();
-        card.fromFirebase(firebaseCard);
-
-        if (cardService.shouldDueDateNotificationBePosted(card, users['@' + email].tz_offset)) {
-          postPrivateNotification(firebaseCard, email);
-          postUnleasherNotification(firebaseCard, email);
+      cardService.getCardsForUser(userId).then(function (cards) {
+        if (cards !== null) {
+          forEach(cards, function(jsonCard) {
+            var card = new Card();
+            card.fromJson(jsonCard);
+            if (cardService.shouldDueDateNotificationBePosted(card, slackUser.tz_offset)) {
+              slackService.postPrivateNotification(userId, card, slackUser);
+              slackService.postUnleasherNotification(userId, card, slackUser);
+            }
+          });
         }
       });
+
     });
   });
-}
-
-function getTimeDifferenceForCard(card, userTimezoneOffset) {
-  var localTimeDifferenceInSeconds = (+new Date(card.child('dueDate').val()) - new Date()) / 1000;
-  var localTimeOffsetInSeconds = (new Date().getTimezoneOffset()*60);
-  var secondsInADay = 60 * 60 * 24;
-
-  return Math.floor((localTimeDifferenceInSeconds - userTimezoneOffset - localTimeOffsetInSeconds) / secondsInADay) + 1;
-}
-
-function getGoalName(card) {
-  var goalName = card.child('type').val();
-  if (card.child('level').val()) {
-    goalName += ' - Level ' + card.child('level').val();
-  }
-
-  return goalName;
-}
-
-function getTimeDifferenceText(timeDifference) {
-  if (timeDifference < 0) {
-    return 'overdue';
-  } else if (timeDifference === 0) {
-    return 'due today';
-  } else if (timeDifference === 1) {
-    return 'due tomorrow';
-  } else {
-    return 'due in ' + timeDifference + ' days';
-  }
-}
-
-function postPrivateNotification(card, email) {
-  var timeDifference = getTimeDifferenceForCard(card, users['@' + email].tz_offset);
-  var slackHandle = '@' + users['@' + email].name;
-  var message = 'Your "' + getGoalName(card) + '" goal is ' + getTimeDifferenceText(timeDifference) + '… Feel free to reach out to your Unleasher if you need any help!';
-
-  postNotification(card, timeDifference,   {
-    channel: slackHandle,
-    text: message,
-    token: config.slackToken,
-    icon_url: config.iconUrl,
-    username: config.botUsername,
-    attachments: []
-  });
-}
-
-function postUnleasherNotification(card, email) {
-  if (!config.unleasherChannel) {
-    console.error('No unleasher channel set!');
-    return;
-  }
-
-  var currentUser = users['@' + email] || {};
-  var timeDifference = getTimeDifferenceForCard(card, currentUser.tz_offset);
-  var message = (currentUser.real_name || currentUser.name) + '\'s "' + getGoalName(card) + '" goal is ' + getTimeDifferenceText(timeDifference) + '!';
-
-  postNotification(card, timeDifference, {
-    channel: config.unleasherChannel,
-    text: message,
-    token: config.slackToken,
-    icon_url: config.iconUrl,
-    username: config.botUsername,
-    attachments: []
-  });
-}
-
-/**
- * Posts a notification to Slack
- * @param {Object} card
- * @param {Number} timeDifference
- * @param {Object} data
- * @param {String} data.channel - Slack channel or Slack registered user
- * @param {String} data.text - Notification contents
- */
-function postNotification(card, timeDifference, data) {
-  request.post(
-    {
-      url:'https://slack.com/api/chat.postMessage',
-      form: data
-    },
-    function(err, httpResponse, body) {
-      if (err || (body && body.ok === false)) {
-        var msg = 'Couldn\'t post to ' + data.channel + '!';
-
-        console.error(msg);
-
-        rollbar.reportMessageWithPayloadData(msg, {
-          level: 'error',
-          data: data.text,
-          response: body
-        });
-      } else {
-        markNotificationAsSent(card, timeDifference);
-
-        rollbar.reportMessageWithPayloadData('Posted a message to ' + data.channel, {
-          level: 'info',
-          data: data.text,
-          response: body
-        });
-      }
-  });
-}
-
-function markNotificationAsSent(card, timeDifference) {
-  var cardRef = card.ref();
-  var notificationsAlreadySent = {};
-
-  notificationsAlreadySent[timeDifference] = true;
-
-  cardRef.child('notificationsAlreadySent').update(notificationsAlreadySent);
 }
 
 app.use(rollbar.errorHandler(config.rollbarToken));
