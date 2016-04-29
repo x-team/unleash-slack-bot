@@ -36,13 +36,8 @@ Card.prototype.getGoalName = function() {
   return goalName;
 }
 
-Card.prototype.hasBeenAlreadyPosted = function(daysToDueDate) {
-  var hasBeenAlreadyPosted = false;
-  if (this.lastNotificationSent != null && this.lastNotificationSent >= daysToDueDate) {
-    hasBeenAlreadyPosted = true;
-  }
-
-  return hasBeenAlreadyPosted;
+Card.prototype.hasBeenAlreadyPostedToday = function(daysToDueDate) {
+  return this.lastNotificationSent === daysToDueDate;
 }
 
 module.exports = Card;
