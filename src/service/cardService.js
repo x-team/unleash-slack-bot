@@ -5,7 +5,7 @@ var request = require('request'),
 exports.shouldDueDateNotificationBePosted = function(card, userTimezoneOffset) {
   var timeDifference = timeService.getTimeDifferenceForCard(card, userTimezoneOffset);
 
-  if (card.isAchieved() || card.hasNoDueDate() || card.hasBeenAlreadyPosted(timeDifference)) {
+  if (card.isAchieved() || card.hasNoDueDate() || card.hasBeenAlreadyPostedToday(timeDifference)) {
     return false;
   }
 
@@ -14,7 +14,12 @@ exports.shouldDueDateNotificationBePosted = function(card, userTimezoneOffset) {
 
 exports.getCardsForUser = function(userId) {
   var deferred = q.defer();
-  request.get('http://paths.unleash.x-team.com/api/v1/paths/' + userId + '.json', (err, httpResponse, body) => {
+  request.get({
+      url: 'http://paths.unleash.x-team.com/api/v1/paths/' + userId,
+      headers: {
+        'Accept': 'application/json'
+      }
+  }, (err, httpResponse, body) => {
     if (err || (body && body.ok === false)) {
         deferred.reject(new Error(err));
     }
@@ -28,9 +33,12 @@ exports.getCardsForUser = function(userId) {
 
 exports.markNotificationAsSent = function(userId, card, timeDifference) {
   request.put({
-    url:'http://paths.unleash.x-team.com/api/v1/paths/' + userId + '/goals/' + card.getId() + '.json',
+    url:'http://paths.unleash.x-team.com/api/v1/paths/' + userId + '/goals/' + card.getId(),
     form: {
       lastNotificationSent: timeDifference
+    },
+    headers: {
+      'Accept': 'application/json'
     }
   });
 }
