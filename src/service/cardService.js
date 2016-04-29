@@ -36,5 +36,5 @@ exports.markNotificationAsSent = function(userId, card, timeDifference) {
 }
 
 function isInNotifiableTimeframe(timeDifference) {
-  return [7, 3, 1, 0].indexOf(timeDifference) !== -1;
+  return timeDifference < 0 || [7, 3, 1, 0].indexOf(timeDifference) !== -1;
 }
