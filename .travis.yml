@@ -11,6 +11,8 @@ before_deploy:
   - sed -i "s/\$rollbar_token_value/$ROLLBAR_TOKEN/g" src/config.json
   - if [ "$TRAVIS_BRANCH" == 'master' ];  then sed -i "s,\$site_url_value,$SITE_URL_PROD,g" src/config.json; fi
   - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s,\$site_url_value,$SITE_URL_STAGING,g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'master' ];  then sed -i "s,\$profiles_api_url_value,$PROFILES_API_URL_PROD,g" src/config.json; fi
+  - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s,\$profiles_api_url_value,$PROFILES_API_URL_STAGING,g" src/config.json; fi
   - if [ "$TRAVIS_BRANCH" == 'master' ];  then sed -i "s/\$firebase_token_value/$FIREBASE_TOKEN_PROD/g" src/config.json; fi
   - if [ "$TRAVIS_BRANCH" == 'develop' ]; then sed -i "s/\$firebase_token_value/$FIREBASE_TOKEN_STAGING/g" src/config.json; fi
   - if [ "$TRAVIS_BRANCH" == 'master' ];  then sed -i "s,\$firebase_url_value,$FIREBASE_URL_PROD,g" src/config.json; fi

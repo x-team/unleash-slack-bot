@@ -1,9 +1,8 @@
 {
   "slackToken": "$slack_token_value",
-  "firebaseToken": "$firebase_token_value",
-  "firebaseUrl": "$firebase_url_value",
   "siteUrl": "$site_url_value",
   "iconUrl": "$icon_url_value",
+  "profilesApiUrl": "$profiles_api_url_value",
   "rollbarToken": "$rollbar_token_value",
   "unleasherChannel": "$unleasher_channel_value",
   "notificationsChannel": "$notifications_channel_value",
