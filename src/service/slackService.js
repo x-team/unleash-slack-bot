@@ -19,7 +19,7 @@ exports.postPrivateNotification = function(userId, card, slackUser) {
     username: config.botUsername,
     attachments: []
   });
-}
+};
 
 exports.postUnleasherNotification = function(userId, card, slackUser) {
   if (!config.unleasherChannel) {
@@ -38,7 +38,7 @@ exports.postUnleasherNotification = function(userId, card, slackUser) {
     username: config.botUsername,
     attachments: []
   });
-}
+};
 
 /**
  * Posts a notification to Slack
@@ -75,4 +75,4 @@ function postNotification(userId, card, timeDifference, data) {
         });
       }
   });
-}
+};

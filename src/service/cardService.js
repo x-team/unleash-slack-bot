@@ -10,7 +10,7 @@ exports.shouldDueDateNotificationBePosted = function(card, userTimezoneOffset) {
   }
 
   return isInNotifiableTimeframe(timeDifference);
-}
+};
 
 exports.getCardsForUser = function(userId) {
   var deferred = q.defer();
@@ -19,7 +19,7 @@ exports.getCardsForUser = function(userId) {
       headers: {
         'Accept': 'application/json'
       }
-  }, (err, httpResponse, body) => {
+  }, function(err, httpResponse, body) {
     if (err || (body && body.ok === false)) {
         deferred.reject(new Error(err));
     }
@@ -29,7 +29,7 @@ exports.getCardsForUser = function(userId) {
   });
 
   return deferred.promise;
-}
+};
 
 exports.markNotificationAsSent = function(userId, card, timeDifference) {
   request.put({
@@ -41,8 +41,8 @@ exports.markNotificationAsSent = function(userId, card, timeDifference) {
       'Accept': 'application/json'
     }
   });
-}
+};
 
 function isInNotifiableTimeframe(timeDifference) {
   return timeDifference < 0 || [7, 3, 1, 0].indexOf(timeDifference) !== -1;
-}
+};
