@@ -1,11 +1,12 @@
 var request = require('request'),
-  q = require('q');
+    config  = require('../config.json'),
+    q = require('q');
 
 exports.getUsers = function() {
   var deferred = q.defer();
 
   request.get({
-    url: 'https://txkaf3ohhf.execute-api.us-west-2.amazonaws.com/staging/profiles',
+    url: config.profilesApiUrl,
     headers: {
       'Accept': 'application/json'
     }
