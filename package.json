@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "echo \"Warning: no test specified\""
+    "test": "./node_modules/.bin/jasmine-node spec"
   },
   "author": "Tadeusz Piskozub",
   "license": "BSD-2-Clause",
@@ -14,7 +14,12 @@
     "cors": "^2.7.1",
     "express": "~4.13.3",
     "firebase": "^2.3.1",
-    "request": "~2.65.0",
+    "lodash.foreach": "^4.2.0",
+    "q": "^1.4.1",
+    "request": "^2.65.0",
     "rollbar": "^0.5.12"
+  },
+  "devDependencies": {
+    "jasmine-node": "^1.14.5"
   }
 }
