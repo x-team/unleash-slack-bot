@@ -30,6 +30,7 @@ setInterval(
   1000 * 60 * 60
 );
 
+app.options('*', cors());
 app.post('/notify', notifyOnSlack);
 
 function notifyOnSlack(req, res) {
