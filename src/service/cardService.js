@@ -1,5 +1,6 @@
 var request = require('request'),
     timeService = require('./timeService'),
+    forEach = require('lodash.foreach'),
     q = require('q');
 
 exports.shouldDueDateNotificationBePosted = function(card, userTimezoneOffset) {
@@ -15,7 +16,7 @@ exports.shouldDueDateNotificationBePosted = function(card, userTimezoneOffset) {
 exports.getCardsForUser = function(userId) {
   var deferred = q.defer();
   request.get({
-      url: 'http://paths.unleash.x-team.com/api/v1/paths/' + userId,
+      url: 'http://paths.unleash.x-team.com/api/v1/paths?userId=' + userId,
       headers: {
         'Accept': 'application/json'
       }
@@ -24,8 +25,15 @@ exports.getCardsForUser = function(userId) {
         deferred.reject(new Error(err));
     }
 
-    var data = JSON.parse(body);
-    deferred.resolve(data.goals);
+    var paths = JSON.parse(body);
+    var goals = [];
+    forEach(paths, function(path) {
+      if (path.goals) {
+        goals = goals.concat(path.goals);
+      }
+    });
+
+    deferred.resolve(goals);
   });
 
   return deferred.promise;
