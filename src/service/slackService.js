@@ -6,12 +6,12 @@ var timeService = require('./timeService'),
 
 rollbar.init(config.rollbarToken);
 
-exports.postPrivateNotification = function(userId, card, slackUser) {
+exports.postPrivateNotification = function(pathId, card, slackUser) {
   var timeDifference = timeService.getTimeDifferenceForCard(card, slackUser.tz_offset);
   var slackHandle = '@' + slackUser.name;
   var message = 'Your "' + card.getGoalName() + '" goal is ' + timeService.getTimeDifferenceText(timeDifference) + '… Feel free to reach out to your Unleasher if you need any help!';
 
-  postNotification(userId, card, timeDifference, {
+  postNotification(pathId, card, timeDifference, {
     channel: slackHandle,
     text: message,
     token: config.slackToken,
@@ -21,7 +21,7 @@ exports.postPrivateNotification = function(userId, card, slackUser) {
   });
 };
 
-exports.postUnleasherNotification = function(userId, card, slackUser) {
+exports.postUnleasherNotification = function(pathId, card, slackUser) {
   if (!config.unleasherChannel) {
     console.error('No unleasher channel set!');
     return;
@@ -30,7 +30,7 @@ exports.postUnleasherNotification = function(userId, card, slackUser) {
   var timeDifference = timeService.getTimeDifferenceForCard(card, slackUser.tz_offset);
   var message = (slackUser.real_name || slackUser.name) + '\'s "' + card.getGoalName() + '" goal is ' + timeService.getTimeDifferenceText(timeDifference) + '!';
 
-  postNotification(userId, card, timeDifference, {
+  postNotification(pathId, card, timeDifference, {
     channel: config.unleasherChannel,
     text: message,
     token: config.slackToken,
@@ -48,7 +48,7 @@ exports.postUnleasherNotification = function(userId, card, slackUser) {
  * @param {String} data.channel - Slack channel or Slack registered user
  * @param {String} data.text - Notification contents
  */
-function postNotification(userId, card, timeDifference, data) {
+function postNotification(pathId, card, timeDifference, data) {
   request.post(
     {
       url:'https://slack.com/api/chat.postMessage',
@@ -66,8 +66,7 @@ function postNotification(userId, card, timeDifference, data) {
           response: body
         });
       } else {
-        cardService.markNotificationAsSent(userId, card, timeDifference);
-
+        cardService.markNotificationAsSent(pathId, card, timeDifference);
         rollbar.reportMessageWithPayloadData('Posted a message to ' + data.channel, {
           level: 'info',
           data: data.text,
