@@ -13,7 +13,7 @@ exports.shouldDueDateNotificationBePosted = function(card, userTimezoneOffset) {
   return isInNotifiableTimeframe(timeDifference);
 };
 
-exports.getCardsForUser = function(userId) {
+exports.getPathsForUser = function(userId) {
   var deferred = q.defer();
   request.get({
       url: 'http://paths.unleash.x-team.com/api/v1/paths?userId=' + userId,
@@ -25,23 +25,15 @@ exports.getCardsForUser = function(userId) {
         deferred.reject(new Error(err));
     }
 
-    var paths = JSON.parse(body);
-    var goals = [];
-    forEach(paths, function(path) {
-      if (path.goals) {
-        goals = goals.concat(path.goals);
-      }
-    });
-
-    deferred.resolve(goals);
+    deferred.resolve(JSON.parse(body));
   });
 
   return deferred.promise;
 };
 
-exports.markNotificationAsSent = function(userId, card, timeDifference) {
+exports.markNotificationAsSent = function(pathId, card, timeDifference) {
   request.put({
-    url:'http://paths.unleash.x-team.com/api/v1/paths/' + userId + '/goals/' + card.getId(),
+    url:'http://paths.unleash.x-team.com/api/v1/paths/' + pathId + '/goals/' + card.getId(),
     form: {
       lastNotificationSent: timeDifference
     },

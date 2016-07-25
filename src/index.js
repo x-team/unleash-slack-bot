@@ -106,24 +106,24 @@ function getUsersList(callback) {
 
 function checkDueDates() {
   userService.getUsers().then(function(profiles) {
-    forEach(profiles, function(profile) {
+    profiles.filter(function(profile) {
       // Check if Slack user for a given email address exists
       var slackUser = users['@' + profile.email];
       if (!slackUser) {
         return;
       }
 
-      cardService.getCardsForUser(profile.id).then(function (cards) {
-        if (cards !== null) {
-          forEach(cards, function(jsonCard) {
+      cardService.getPathsForUser(profile.id).then(function (paths) {
+        paths.filter(function(path) {
+          path.goals.filter(function(goal) {
             var card = new Card();
-            card.fromJson(jsonCard);
+            card.fromJson(goal);
             if (cardService.shouldDueDateNotificationBePosted(card, slackUser.tz_offset)) {
-              slackService.postPrivateNotification(profile.id, card, slackUser);
-              slackService.postUnleasherNotification(profile.id, card, slackUser);
+              slackService.postPrivateNotification(path.id, card, slackUser);
+              slackService.postUnleasherNotification(path.id, card, slackUser);
             }
           });
-        }
+        });
       });
     });
   });
